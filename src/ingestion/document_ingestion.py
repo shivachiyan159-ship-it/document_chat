@@ -1,19 +1,30 @@
-from src.logger.custom_logger import CustomLogger
+from src.logger import GLOBAL_LOGGER as log
+from src.exception.custom_exception import CustomException
 import logging
-
-loggerobj=CustomLogger()
-logger=loggerobj.get_logger(__file__)
+import sys
+from pathlib import Path
 
 
 def add(a,b):
-    logger.info("started add method") 
-    sum = a+b
-    logger.info("ended add method")
-    return sum 
-
+    log.info("started add method")
+    try:
+     a = 9/0
+    except Exception as e:
+        log.error(e)
+     #log.error(str(CustomException(e, sys)))
+     # three scenarios we are handling
+     #customobj=CustomException("Division failed")   
+     #customobj=CustomException("Division failed", sys)
+     #customobj=CustomException("Division failed", e)
+     #print(customobj) # it will call __str__ method
+        raise CustomException("Division failed", sys)
 
 
 if __name__=="__main__":
-    add(2,3)
+    try:
+        add(2,3)
+    except CustomException as e:
+       log.error(str(e))
+   
     
 

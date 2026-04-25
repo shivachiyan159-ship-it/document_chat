@@ -1,6 +1,7 @@
 import os
 import logging
 from datetime import datetime
+import structlog
 
 class CustomLogger():
     def __init__(self):
@@ -12,6 +13,9 @@ class CustomLogger():
         self.LOG_FILE_PATH=os.path.join(self.LOG_FOLDER,LOG_FILE_NAME)
        
     def get_logger(self,name=__file__):
+        logger_name=os.path.basename(name)
+        # output example: c:/users/shiva/data_indgestion.py"
+        
         # for file handler
         file_handler=logging.FileHandler(self.LOG_FILE_PATH)
         file_handler.setLevel(logging.INFO)
@@ -28,7 +32,19 @@ class CustomLogger():
             handlers=[file_handler,console_handler]
         )
         
-        return logging.getLogger(__name__)
+        # Configure structlog for JSON structured logging
+        structlog.configure(
+            processors=[
+                structlog.processors.TimeStamper(fmt="iso", utc=True, key="timestamp"),
+                structlog.processors.add_log_level,
+                structlog.processors.EventRenamer(to="event"),
+                structlog.processors.JSONRenderer()
+            ],
+            logger_factory=structlog.stdlib.LoggerFactory(),
+            cache_logger_on_first_use=True,
+        )
+        
+        return structlog.get_logger(logger_name)
     
 if __name__ == "__main__":
       loggerobj=CustomLogger()
