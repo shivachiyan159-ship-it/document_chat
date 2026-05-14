@@ -3,6 +3,8 @@ import re
 import sys
 from typing import Iterable, List
 import uuid
+
+from fastapi import UploadFile
 from src.logger import GLOBAL_LOGGER as log
 from src.exception.custom_exception import CustomException
 from langchain_community.document_loaders import PyPDFLoader,Docx2txtLoader,TextLoader
@@ -59,7 +61,14 @@ def load_documents(paths:Iterable[Path]):
     except Exception as e:
         log.error("failed loading documents",str(e))
         raise CustomException("Error loading diocuments",e)
-    
+
+class FastAPIFileAdapter:
+    def __init__(self,uf:UploadFile):
+        self.uf=uf
+        self.name= uf.filename
+    def getbuffer(self):
+        self.uf.file.seek(0)
+        return self.uf.file.read()
 
 if __name__ == "__main__":
     try:
