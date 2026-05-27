@@ -22,7 +22,7 @@ class ModelLoader:
             log.info("loaded embedding model",model=embedding_model_name)
             return HuggingFaceEmbeddings(model_name=embedding_model_name)
         except Exception as e:
-            log.error("Error loading embedding model",str(e))
+            log.error("Error loading embedding model",error=str(e))
             raise CustomException("failed to load embedding model",sys)
         
 
@@ -50,7 +50,7 @@ class ModelLoader:
             else:
                 return ChatOpenAI(model=model_name,api_key=os.getenv("OPENAI_API_KEY"),max_tokens=max_tokens,temperature=temprature)
         except Exception as e:
-            log.error("error loading llm",str(e))
+            log.error("error loading llm",error=str(e))
             raise ValueError("error loading llm")
             
 

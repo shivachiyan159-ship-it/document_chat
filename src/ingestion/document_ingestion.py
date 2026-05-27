@@ -24,7 +24,7 @@ class DocumentIngestion():
     def _storevectordb(self,chunks) -> QdrantVectorStore:
         try:
             embed_model=self.model_loader.load_embedding()
-            vectorstore=QdrantVectorStore.add_documents(
+            vectorstore=QdrantVectorStore.from_documents(
                 documents=chunks,
                 embedding=embed_model,
                 path="qdrantdb",
@@ -32,7 +32,7 @@ class DocumentIngestion():
             )
             return vectorstore
         except Exception as e:
-            log.error("failed storing vectordb")
+            log.error("failed storing vectordb",error=str(e))
             raise CustomException("error storing data into vectordb",e)
             
         
@@ -50,5 +50,5 @@ class DocumentIngestion():
             # # return Rertriever
             # return vectorstore.as_retriever(search_args={"k":topk})
         except Exception as e:
-            log.error("failed storing vectordb")
+            log.error("failed storing vectordb",error=str(e))
             raise CustomException("Error storing vectordb",e)

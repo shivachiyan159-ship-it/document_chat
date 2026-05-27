@@ -46,11 +46,12 @@ async def chat_index(files:List[UploadFile]=File(...),
         log.info("document ingestion started")
         wrapped=[FastAPIFileAdapter(file) for file in files]
         docingestion=DocumentIngestion()
-        docingestion.insertvectordb(wrapped,FileUploadPath,chunk_size,chunk_overlap)
+        
+        docingestion.insertvectordb(wrapped,FileUploadPath,int(chunk_size),int(chunk_overlap))
         log.info("Document ingestion completed")
         return {"Response":"Document ingestion completed sucessfully"}              
     except Exception as e:
-        log.error("Document ingestion failed")
+        log.error("Document ingestion failed",error=str(e))
         raise HTTPException(status_code=500,detail=f"Indexing failed: {e}")
 
 @app.post("/chat/query")   
@@ -69,5 +70,5 @@ async def ChatQuery(question=Form(...)):
         }
     except Exception as e:
         log.error(f"chat query failed: {str(e)}")
-        raise HTTPException(status_code=500,detaile=f"query failed: {e}")
+        raise HTTPException(status_code=500,detail=f"query failed: {e}")
     

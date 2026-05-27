@@ -13,6 +13,8 @@ SUPPORTED_EXTENSIONS = {".pdf",".docx",".txt"}
 
 def save_upload_files(uploadfiles:Iterable,targetdir:Path):
     try:
+        # Convert string to Path
+        targetdir = Path(targetdir)
         targetdir.mkdir(exist_ok=True)
         saved:List[Path]=[]
         for uf in uploadfiles:
@@ -55,11 +57,11 @@ def load_documents(paths:Iterable[Path]):
             else:
                 log.warning("unsupported extension",path=str(p))
                 #continue
-            docs.extend(loader.load)
+            docs.extend(loader.load())
         log.info("Documents successfully loaded",count=len(docs))
         return docs
     except Exception as e:
-        log.error("failed loading documents",str(e))
+        log.error("failed loading documents",error=str(e))
         raise CustomException("Error loading diocuments",e)
 
 class FastAPIFileAdapter:
@@ -74,5 +76,5 @@ if __name__ == "__main__":
     try:
         save_upload_files()
     except CustomException as e:
-        log.error("custom eception",e)
+        log.error("custom eception",error=str(e))
     

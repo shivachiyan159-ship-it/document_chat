@@ -1,6 +1,8 @@
+from operator import itemgetter
 import sys
 
 from langchain_core.output_parsers import StrOutputParser
+from langchain_core.prompts import ChatPromptTemplate
 from langchain_qdrant import QdrantVectorStore
 from src.utils.model_loader import ModelLoader
 from src.logger import GLOBAL_LOGGER as log 
@@ -10,28 +12,39 @@ from src.prompts.prompts import PROMT_REGISTRY
 
 class ConversationalRAG:
     def __init__(self):
-        # build retirvel
-        #self.model_loader=ModelLoader()
-        self.embed_model=ModelLoader().load_embedding()
-        self.config=load_config()
-        self.llm = self._load_llm()
-        self.retrievar=self._load_qdrant_retrieval()
+        try:
+            # build retirvel
+            #self.model_loader=ModelLoader()
+            self.embed_model=ModelLoader().load_embedding()
+            self.config=load_config()
+            self.llm = self._load_llm()
+            self.retrievar=self._load_qdrant_retrievar()
+            log.info("retrievar created successfully")
         
-        # buld prompt
-        self.chain=None
-        if self.retrievar is not None:
-            self.chain=self._build_lcel_chain()
+            # buld prompt
+            log.info("building lcel chain")
+            self.chain=None
+            if self.retrievar is not None:
+                self._build_lcel_chain()
+                log.info("completed lcel chain")
+        except Exception as e:
+            log.error("retrieval initialization failed",error=str(e))
+            raise CustomException("retrieval initialization failed",sys)
             
             
     def _load_qdrant_retrievar(self):
-        vectorstore=QdrantVectorStore.from_existing_collection(
-            embedding=self.embed_model,
-            path="qdrantdb",
-            collection_name="document_chat"
-        )
-        topk = self.config["retriever"]["top_k"]
-        retrievar=vectorstore.as_retriever(search_args={"k":topk})
-        return retrievar
+        try:
+            vectorstore=QdrantVectorStore.from_existing_collection(
+                embedding=self.embed_model,
+                path="qdrantdb",
+                collection_name="document_chat"
+            )
+            topk = self.config["retriever"]["top_k"]
+            retrievar=vectorstore.as_retriever(search_args={"k":topk})
+            return retrievar
+        except Exception as e:
+            log.error("retrievar created failed",error=str(e))
+            raise CustomException("retrievar created failed",sys)
         
     def _load_llm(self):
         try:
@@ -44,26 +57,26 @@ class ConversationalRAG:
             log.error("failed top load LLM",error=str(e))  
             raise CustomException("LLM loading faild in ConersationalRAG",sys)
         
-    def _build_lcel_chain(self,payload):
+    def _build_lcel_chain(self):
         try:
             # 1. Rewrite user question with chathistory contecxt
-            context_question_prompt=PROMT_REGISTRY["contextualize_question"]
+            context_question_prompt:ChatPromptTemplate=PROMT_REGISTRY["contextualize_question"]
             question_rewriter=(
-                {"input":payload.input,"chat_history":payload.chat_history}
+                {"input": itemgetter("input"),"chat_history": itemgetter("chat_history")}
                 | context_question_prompt
                 | self.llm
-                | StrOutputParser
+                | StrOutputParser()
             )
             
             retrievedocs= question_rewriter | self.retrievar | self._format_docs
             
             # 2. Anserr using retrieved context + question rewriter
-            context_qa_prompt=PROMT_REGISTRY["context_qa"]
+            context_qa_prompt:ChatPromptTemplate=PROMT_REGISTRY["context_qa"]
             self.chain=(
-                {"context":retrievedocs,"input":payload.input}
+                {"context":retrievedocs,"input": itemgetter("input")}
                 | context_qa_prompt
                 | self.llm
-                | StrOutputParser
+                | StrOutputParser()
             )
               
             log.info("LCEL graph build successfully]")  
@@ -78,7 +91,7 @@ class ConversationalRAG:
     def invoke(self,user_input,chat_history):
         try:
             if self.chain is None:
-                raise CustomException("Rag chain not initialized",sys)
+                raise ValueError("Rag chain not initialized")
             
             chat_history=chat_history or []
             payload={"input":user_input,"chat_history":chat_history}
@@ -87,7 +100,7 @@ class ConversationalRAG:
                 log.warning("No answer generated",user_input=user_input)
                 return "no answer generated"
             
-            log.info("chain invoked successfullya nd generated answer",user_input=user_input,answer=str(answer["100"]))
+            log.info("chain invoked successfullya nd generated answer",user_input=user_input,answer=str(answer[:100]))
             return answer   
         except Exception as e:
             log.error("failed to invoke ConversationalRAG",error=str(e))
